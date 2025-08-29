@@ -90,6 +90,7 @@ uvicorn namdo_bot:app --host 0.0.0.0 --port 8000 --reload
 ```
 - **응답**: `UserInfo` 모델
 - **상태 코드**: 200 (성공), 400 (잘못된 요청)
+- **에러 처리**: 중복된 아이디/이메일 검증
 
 #### 2. 로그인
 - **엔드포인트**: `POST /token`
@@ -99,6 +100,7 @@ uvicorn namdo_bot:app --host 0.0.0.0 --port 8000 --reload
   - `password`: 비밀번호
 - **응답**: `Token` 모델
 - **상태 코드**: 200 (성공), 401 (인증 실패)
+- **토큰 만료**: 30분
 
 #### 3. 사용자 정보 조회
 - **엔드포인트**: `GET /users/me`
@@ -147,6 +149,7 @@ uvicorn namdo_bot:app --host 0.0.0.0 --port 8000 --reload
 ```
 - **응답**: `ChatResponse` 모델
 - **상태 코드**: 200 (성공), 401 (인증 필요)
+- **대화 단계**: "initial" → "energy_preference"
 
 #### 7. 대화 진행
 - **엔드포인트**: `POST /chat`
@@ -162,6 +165,10 @@ uvicorn namdo_bot:app --host 0.0.0.0 --port 8000 --reload
 ```
 - **응답**: `ChatResponse` 모델
 - **상태 코드**: 200 (성공), 401 (인증 필요), 404 (세션 없음)
+- **대화 흐름**: 
+  - "energy_preference" → "interest_focus"
+  - "interest_focus" → "additional_requirements"
+  - "additional_requirements" → "completed"
 
 #### 8. 추천 결과 조회
 - **엔드포인트**: `GET /recommendations/{session_id}`
@@ -170,6 +177,7 @@ uvicorn namdo_bot:app --host 0.0.0.0 --port 8000 --reload
 - **경로 매개변수**: `session_id` (대화 세션 ID)
 - **응답**: `RecommendationResponse` 모델
 - **상태 코드**: 200 (성공), 401 (인증 필요), 404 (세션 없음)
+- **전제 조건**: 대화가 "completed" 상태여야 함
 
 ### 🏥 **시스템 상태 (Health)**
 
@@ -187,7 +195,7 @@ uvicorn namdo_bot:app --host 0.0.0.0 --port 8000 --reload
 - **응답**: 기본 메시지
 - **상태 코드**: 200 (성공)
 
-## 💬 대화 시나리오
+## 💬 대화 시나리오 (완성된 로직)
 
 ### Phase 1: 초기 정보 입력
 - 여행 시기 (월별)
@@ -196,12 +204,12 @@ uvicorn namdo_bot:app --host 0.0.0.0 --port 8000 --reload
 - 아이 연령대 (해당하는 경우)
 
 ### Phase 2: 대화형 선호도 파악
-1. **분위기 선호도**: 활기찬 vs 여유로운
-2. **핵심 관심사**: 자연, 음식, 역사/문화
-3. **추가 요구사항**: 이동 편의성, 휴식 공간 등
+1. **분위기 선호도** (energy_preference): 활기찬 vs 여유로운
+2. **핵심 관심사** (interest_focus): 자연, 음식, 역사/문화
+3. **추가 요구사항** (additional_requirements): 이동 편의성, 휴식 공간 등
 
 ### Phase 3: 최종 추천
-- TOP 5 축제 추천
+- TOP 5 축제 추천 (현재는 2개 예시)
 - 개인화된 추천 이유
 - XAI 기반 설명
 
@@ -210,49 +218,51 @@ uvicorn namdo_bot:app --host 0.0.0.0 --port 8000 --reload
 ### 주요 테이블
 
 #### `users` - 사용자 정보
-- `id`: 기본키
-- `username`: 사용자명 (고유)
-- `email`: 이메일 (고유)
-- `hashed_password`: 암호화된 비밀번호
-- `full_name`: 전체 이름
-- `is_active`: 활성 상태
-- `created_at`, `updated_at`: 생성/수정 시간
+- `id`: 기본키 (Integer, Auto Increment)
+- `username`: 사용자명 (String(50), Unique, Index)
+- `email`: 이메일 (String(100), Unique, Index)
+- `hashed_password`: 암호화된 비밀번호 (String(255))
+- `full_name`: 전체 이름 (String(100), Optional)
+- `is_active`: 활성 상태 (Boolean, Default: True)
+- `created_at`: 생성 시간 (DateTime, Default: func.now())
+- `updated_at`: 수정 시간 (DateTime, Default: func.now())
 
 #### `conversations` - 대화 세션
-- `id`: 기본키
-- `session_id`: 세션 ID (고유)
-- `user_id`: 사용자 ID (외래키)
-- `travel_period`: 여행 시기
-- `companion_type`: 동반자 유형
-- `has_pets`: 반려견 동반 여부
-- `child_age_group`: 아이 연령대
-- `phase`: 대화 단계
-- `energy_preference`: 에너지 레벨 선호도
-- `interest_focus`: 관심사
-- `additional_requirements`: 추가 요구사항
-- `status`: 세션 상태
-- `created_at`, `updated_at`: 생성/수정 시간
+- `id`: 기본키 (Integer, Auto Increment)
+- `session_id`: 세션 ID (String(100), Unique, Index)
+- `user_id`: 사용자 ID (Integer, ForeignKey: users.id)
+- `travel_period`: 여행 시기 (String(20))
+- `companion_type`: 동반자 유형 (String(50))
+- `has_pets`: 반려견 동반 여부 (Boolean, Default: False)
+- `child_age_group`: 아이 연령대 (String(50), Optional)
+- `phase`: 대화 단계 (String(20), Default: "initial")
+- `energy_preference`: 에너지 레벨 선호도 (String(20))
+- `interest_focus`: 관심사 (String(50))
+- `additional_requirements`: 추가 요구사항 (Text)
+- `status`: 세션 상태 (String(20), Default: "active")
+- `created_at`: 생성 시간 (DateTime, Default: func.now())
+- `updated_at`: 수정 시간 (DateTime, Default: func.now())
 
 #### `conversation_messages` - 대화 메시지
-- `id`: 기본키
-- `conversation_id`: 대화 세션 ID (외래키)
-- `role`: 메시지 역할 (user/assistant)
-- `content`: 메시지 내용
-- `turn_number`: 턴 번호
-- `created_at`: 생성 시간
+- `id`: 기본키 (Integer, Auto Increment)
+- `conversation_id`: 대화 세션 ID (Integer, ForeignKey: conversations.id)
+- `role`: 메시지 역할 (String(20)) - "user" 또는 "assistant"
+- `content`: 메시지 내용 (Text)
+- `turn_number`: 턴 번호 (Integer, Default: 1)
+- `created_at`: 생성 시간 (DateTime, Default: func.now())
 
 #### `user_preferences` - 사용자 선호도
-- `id`: 기본키
-- `user_id`: 사용자 ID (외래키)
-- `preference_type`: 선호도 유형
-- `preference_value`: 선호도 값
+- `id`: 기본키 (Integer, Auto Increment)
+- `user_id`: 사용자 ID (Integer, ForeignKey: users.id)
+- `preference_type`: 선호도 유형 (String(50), Index)
+- `preference_value`: 선호도 값 (String(100))
 
 ## 🔧 환경 변수
 
 | 변수명 | 설명 | 기본값 |
 |--------|------|--------|
 | `DATABASE_URL` | MySQL 데이터베이스 연결 문자열 | - |
-| `SECRET_KEY` | JWT 토큰 암호화 키 | - |
+| `SECRET_KEY` | JWT 토큰 암호화 키 | "namdo-bot-secret-key-2024-flova-project" |
 | `ACCESS_TOKEN_EXPIRE_MINUTES` | 토큰 만료 시간 | 30 |
 | `HOST` | 서버 호스트 | 0.0.0.0 |
 | `PORT` | 서버 포트 | 8000 |
@@ -302,7 +312,7 @@ curl -X POST "http://localhost:8000/initialize" \
   }'
 ```
 
-### 4. 대화 진행
+### 4. 대화 진행 (1단계: 분위기 선택)
 ```bash
 curl -X POST "http://localhost:8000/chat" \
   -H "Authorization: Bearer YOUR_TOKEN" \
@@ -314,7 +324,30 @@ curl -X POST "http://localhost:8000/chat" \
   }'
 ```
 
-### 5. 추천 결과 조회
+### 5. 대화 진행 (2단계: 관심사 선택)
+```bash
+curl -X POST "http://localhost:8000/chat" \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "session_id": "SESSION_ID",
+    "user_response": "B. 역시 전라도는 음식이니까요. 부모님도 맛있는 걸 제일 좋아하세요.",
+    "selected_option": "B"
+  }'
+```
+
+### 6. 대화 진행 (3단계: 추가 요구사항)
+```bash
+curl -X POST "http://localhost:8000/chat" \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "session_id": "SESSION_ID",
+    "user_response": "아 맞아요! 오래 걸으시는 건 좀 힘들어하세요. 앉을 곳이 많으면 좋겠네요."
+  }'
+```
+
+### 7. 추천 결과 조회
 ```bash
 curl -X GET "http://localhost:8000/recommendations/SESSION_ID" \
   -H "Authorization: Bearer YOUR_TOKEN"

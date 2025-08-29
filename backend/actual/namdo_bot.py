@@ -13,7 +13,7 @@ from sqlalchemy.orm import Session
 
 # --- 로컬 모듈 임포트 ---
 from database import get_db, create_tables, Conversation, User
-from auth import authenticate_user, create_access_token, get_current_active_user, create_user_helper
+from auth import authenticate_user, create_access_token, get_current_active_user, create_user_helper, ACCESS_TOKEN_EXPIRE_MINUTES
 from crud import (
     create_conversation, get_conversation_by_session_id, update_conversation_phase,
     add_conversation_message, get_conversation_messages,

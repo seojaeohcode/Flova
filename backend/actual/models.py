@@ -1,6 +1,6 @@
 # models.py
 
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel
 from typing import Optional, List, Dict, Any
 from datetime import datetime
 
@@ -8,7 +8,7 @@ from datetime import datetime
 
 class UserBase(BaseModel):
     username: str
-    email: EmailStr
+    email: str
     full_name: Optional[str] = None
     profile_picture: Optional[str] = None
 
@@ -80,7 +80,173 @@ class UserPreference(UserPreferenceBase):
 # ==================== 시스템 상태 모델 ====================
 
 class HealthCheck(BaseModel):
-    status: str
     message: str
     timestamp: str
     version: str
+
+# 축제 관련 모델 추가
+class FestivalBase(BaseModel):
+    title: str
+    contentid: str
+    contenttypeid: str
+    addr1: str
+    start_date: str
+    end_date: str
+    image: str
+    progresstype: str
+    festivaltype: str
+    tel: str
+    region: str
+
+class FestivalDetail(BaseModel):
+    contentid: str
+    title: str
+    createdtime: str
+    modifiedtime: str
+    tel: str
+    telname: str
+    homepage: str
+    firstimage: str
+    firstimage2: str
+    addr1: str
+    addr2: str
+    mapx: str
+    mapy: str
+    mlevel: str
+    overview: str
+
+class FestivalIntro(BaseModel):
+    contentid: str
+    sponsor1: str
+    sponsor1tel: str
+    sponsor2: str
+    eventenddate: str
+    playtime: str
+    eventplace: str
+    eventstartdate: str
+    usetimefestival: str
+    progresstype: str
+    festivaltype: str
+
+class PetInfo(BaseModel):
+    contentid: str
+    acmpyPsblCpam: str
+    relaRntlPrdlst: str
+    acmpyNeedMtr: str
+    etcAcmpyInfo: str
+    relaPurcPrdlst: str
+    relaAcdntRiskMtr: str
+    acmpyTypeCd: str
+    relaPosesFclty: str
+
+# 축제 추천 요청 모델
+class FestivalRecommendationRequest(BaseModel):
+    travel_period: str  # 여행 시기 (예: "10월")
+    companion_type: str  # 동반자 유형 (예: "부모님 동반 가족")
+    atmosphere: str  # 여행 분위기 (예: "여유로운 힐링")
+    core_experience: str  # 핵심 경험 (예: "음식")
+    additional_considerations: str  # 추가 고려사항 (예: "걷기 최소화")
+
+# 축제 추천 응답 모델
+class FestivalRecommendation(BaseModel):
+    title: str
+    contentid: str
+    region: str
+    start_date: str
+    end_date: str
+    location: str
+    description: str
+    why_recommended: str
+    pet_friendly: bool
+    accessibility_info: str
+
+class FestivalRecommendationResponse(BaseModel):
+    recommendations: List[FestivalRecommendation]
+    total_count: int
+    reasoning: str
+
+# 봇 시작말 요청/응답 모델
+class BotGreetingRequest(BaseModel):
+    travel_period: str
+    companion_type: str
+
+class BotGreetingResponse(BaseModel):
+    greeting_message: str
+    next_question: str
+    choices: List[str]
+    session_id: str
+
+# XAI 마무리 요청/응답 모델
+class XAIFinalizeRequest(BaseModel):
+    session_id: str
+
+class XAIFinalizeResponse(BaseModel):
+    session_id: str
+    user_profile_summary: str
+    recommendation_summary: str
+    top_recommendation: dict
+    alternative_recommendations: List[dict]
+    reasoning_explanation: str
+    final_message: str
+    timestamp: str
+
+# LangChain PydanticOutputParser용 모델들
+class FestivalRecommendationItem(BaseModel):
+    title: str
+    region: str
+    start_date: str
+    end_date: str
+    location: str
+    score: int
+    reasons: List[str]
+    why_recommended: str
+    image: Optional[str] = None
+    tel: Optional[str] = None
+
+class TopRecommendation(BaseModel):
+    title: str
+    region: str
+    start_date: str
+    end_date: str
+    location: str
+    score: int
+    reasons: List[str]
+    why_best: str
+    image: Optional[str] = None
+    tel: Optional[str] = None
+
+class AlternativeRecommendation(BaseModel):
+    rank: int
+    title: str
+    region: str
+    start_date: str
+    end_date: str
+    location: str
+    score: int
+    reasons: List[str]
+    why_alternative: str
+    image: Optional[str] = None
+    tel: Optional[str] = None
+
+class ScoreBreakdown(BaseModel):
+    region_compatibility: int
+    season_matching: int
+    companion_optimization: int
+    interest_matching: int
+    accessibility_consideration: int
+    total_score: int
+
+class RecommendationCriteria(BaseModel):
+    region_priority: str
+    season_focus: str
+    companion_type: str
+    interest_focus: str
+    accessibility_focus: str
+
+class StructuredRecommendationResponse(BaseModel):
+    user_profile_summary: str
+    top_recommendation: FestivalRecommendationItem
+    alternative_recommendations: List[FestivalRecommendationItem]
+    score_breakdown: dict
+    reasoning_explanation: str
+    final_message: str

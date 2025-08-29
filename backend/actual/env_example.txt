@@ -3,7 +3,13 @@
 # ========================================
 
 # 🔐 필수 설정
-DATABASE_URL=mysql+pymysql://flova_user:flova06*@db-37h1g8-kr.vpc-pub-cdb.ntruss.com:3306/flova?charset=utf8mb4
+DATABASE_URL=mysql+pymysql://flova_user:flova06*@db-37h1g8.vpc-cdb.ntruss.com:3306/flova?charset=utf8mb4
+
+# 🌐 TourAPI 설정
+TOUR_API_KEY=your_tour_api_key_here
+
+# 🤖 ClovaX LLM 설정
+CLOVASTUDIO_API_KEY=your_clovastudio_api_key_here
 
 # 🔑 보안 설정 (선택사항 - 기본값 사용)
 # SECRET_KEY=your-super-secret-key-here

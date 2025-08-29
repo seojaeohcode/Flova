@@ -85,9 +85,30 @@ log_info "✅ VPC 서버 연결 성공: $VPC_SERVER_IP"
 # ========================================
 
 log_step "4. VPC 서버에 프로젝트 디렉토리 생성 및 파일 업로드"
-ssh $VPC_SERVER_USER@$VPC_SERVER_IP "mkdir -p $VPC_PROJECT_DIR"
-scp -r namdo_bot.py database.py auth.py models.py crud.py tour_api.py requirements.txt $VPC_SERVER_USER@$VPC_SERVER_IP:$VPC_PROJECT_DIR/
+ssh $VPC_SERVER_USER@$VPC_SERVER_IP "rm -rf $VPC_PROJECT_DIR && mkdir -p $VPC_PROJECT_DIR"
+scp -r namdo_bot.py database.py auth.py models.py crud.py tour_api.py festival_service.py requirements.txt $VPC_SERVER_USER@$VPC_SERVER_IP:$VPC_PROJECT_DIR/
 log_info "✅ 소스 코드 업로드 완료"
+
+# ========================================
+# 🗄️ 데이터베이스 스키마 업데이트
+# ========================================
+
+log_step "4.5. 데이터베이스 스키마 업데이트"
+ssh $VPC_SERVER_USER@$VPC_SERVER_IP "mysql -h $DB_HOST -u $DB_USER -p$DB_PASSWORD -e \"USE $DB_NAME; ALTER TABLE users ADD COLUMN profile_picture VARCHAR(255) NULL;\"" 2>/dev/null || echo "⚠️ profile_picture 컬럼이 이미 존재하거나 추가 중 오류 발생"
+
+# username 컬럼 추가 (User 테이블에)
+ssh $VPC_SERVER_USER@$VPC_SERVER_IP "mysql -h $DB_HOST -u $DB_USER -p$DB_PASSWORD -e \"USE $DB_NAME; ALTER TABLE users ADD COLUMN username VARCHAR(255) UNIQUE NOT NULL AFTER id;\"" 2>/dev/null || echo "⚠️ username 컬럼이 이미 존재하거나 추가 중 오류 발생"
+
+# 축제 관련 테이블 생성
+ssh $VPC_SERVER_USER@$VPC_SERVER_IP "mysql -h $DB_HOST -u $DB_USER -p$DB_PASSWORD -e \"USE $DB_NAME; CREATE TABLE IF NOT EXISTS festivals (id INT AUTO_INCREMENT PRIMARY KEY, contentid VARCHAR(50) UNIQUE NOT NULL, title VARCHAR(500) NOT NULL, contenttypeid VARCHAR(50), addr1 VARCHAR(500), start_date VARCHAR(20), end_date VARCHAR(20), image VARCHAR(1000), progresstype VARCHAR(100), festivaltype VARCHAR(100), tel VARCHAR(100), region VARCHAR(100), created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP);\"" 2>/dev/null || echo "⚠️ festivals 테이블 생성 중 오류 발생"
+
+ssh $VPC_SERVER_USER@$VPC_SERVER_IP "mysql -h $DB_HOST -u $DB_USER -p$DB_PASSWORD -e \"USE $DB_NAME; CREATE TABLE IF NOT EXISTS festival_details (id INT AUTO_INCREMENT PRIMARY KEY, contentid VARCHAR(50), title VARCHAR(500) NOT NULL, createdtime VARCHAR(20), modifiedtime VARCHAR(20), tel VARCHAR(100), telname VARCHAR(100), homepage VARCHAR(1000), firstimage VARCHAR(1000), firstimage2 VARCHAR(1000), addr1 VARCHAR(500), addr2 VARCHAR(500), mapx VARCHAR(50), mapy VARCHAR(50), mlevel VARCHAR(50), overview TEXT, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY (contentid) REFERENCES festivals(contentid));\"" 2>/dev/null || echo "⚠️ festival_details 테이블 생성 중 오류 발생"
+
+ssh $VPC_SERVER_USER@$VPC_SERVER_IP "mysql -h $DB_HOST -u $DB_USER -p$DB_PASSWORD -e \"USE $DB_NAME; CREATE TABLE IF NOT EXISTS festival_intros (id INT AUTO_INCREMENT PRIMARY KEY, contentid VARCHAR(50), sponsor1 VARCHAR(200), sponsor1tel VARCHAR(100), sponsor2 VARCHAR(200), eventenddate VARCHAR(20), playtime VARCHAR(200), eventplace VARCHAR(500), eventstartdate VARCHAR(20), usetimefestival VARCHAR(500), progresstype VARCHAR(100), festivaltype VARCHAR(100), created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY (contentid) REFERENCES festivals(contentid));\"" 2>/dev/null || echo "⚠️ festival_intros 테이블 생성 중 오류 발생"
+
+ssh $VPC_SERVER_USER@$VPC_SERVER_IP "mysql -h $DB_HOST -u $DB_USER -p$DB_PASSWORD -e \"USE $DB_NAME; CREATE TABLE IF NOT EXISTS pet_infos (id INT AUTO_INCREMENT PRIMARY KEY, contentid VARCHAR(50), acmpyPsblCpam VARCHAR(200), relaRntlPrdlst VARCHAR(500), acmpyNeedMtr VARCHAR(500), etcAcmpyInfo TEXT, relaPurcPrdlst VARCHAR(500), relaAcdntRiskMtr VARCHAR(500), acmpyTypeCd VARCHAR(50), relaPosesFclty VARCHAR(500), created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY (contentid) REFERENCES festivals(contentid));\"" 2>/dev/null || echo "⚠️ pet_infos 테이블 생성 중 오류 발생"
+
+log_info "✅ 데이터베이스 스키마 업데이트 완료"
 
 # ========================================
 # 🐍 Python 환경 설정

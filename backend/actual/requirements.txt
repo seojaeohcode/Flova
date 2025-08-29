@@ -1,0 +1,25 @@
+# FastAPI 및 웹 프레임워크
+fastapi
+uvicorn
+python-multipart
+
+# 데이터베이스
+sqlalchemy
+pymysql
+
+# 인증 및 보안
+python-jose[cryptography]
+passlib[bcrypt]
+python-dotenv
+
+# LLM 및 AI
+requests
+langchain-community
+langchain-naver
+langchain
+faiss-cpu
+pypdf
+jinja2
+
+# 데이터 검증
+pydantic

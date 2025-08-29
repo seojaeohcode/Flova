@@ -1,0 +1,1 @@
+documents = load_data_from_api(API_URL, API_HEADERS, API_PARAMS)

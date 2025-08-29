@@ -1,0 +1,15 @@
+requests
+langchain-community
+langchain-naver
+langchain
+fastapi
+uvicorn
+openai
+faiss-cpu
+pypdf
+jinja2
+
+
+
+
+

@@ -13,7 +13,7 @@ from langchain_core.output_parsers import StrOutputParser
 from typing import List, Dict, Any
 
 output_parser = StrOutputParser()
-
+#
 # 1) env
 _ = load_dotenv(find_dotenv())
 clova_api_key = os.getenv("CLOVASTUDIO_API_KEY")

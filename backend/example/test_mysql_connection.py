@@ -14,7 +14,7 @@ def test_mysql_connection():
     
     # 연결 정보
     config = {
-        'host': 'db-37h1g8-kr.vpc-pub-cdb.ntruss.com',
+        'host': 'db-37h1g8.vpc-cdb.ntruss.com',
         'port': 3306,
         'user': 'flova_user',
         'password': 'flova06*',

@@ -3,21 +3,37 @@
 # 남도봇 축제 추천 시스템 배포 스크립트
 # 네이버 클라우드 VPC 서버에 배포
 
-echo "🚀 남도봇 축제 추천 시스템 배포 시작..."
+echo "🚀 남도봇 축제 추천 시스템 VPC 배포 시작..."
 
 # 색상 정의
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
-# 설정 변수 (실제 값으로 수정 필요)
-SERVER_IP="211.188.63.67"
-SERVER_USER="root"
-PROJECT_DIR="/home/$SERVER_USER/namdo-bot"
-SERVICE_NAME="namdo-bot"
+# ========================================
+# 🎯 VPC 배포 설정 (실제 값으로 수정 필요)
+# ========================================
 
-# 함수 정의
+# VPC 서버 정보
+VPC_SERVER_IP="211.188.63.67"           # ✅ VPC 서버의 공인 IP 또는 사설 IP
+VPC_SERVER_USER="root"                  # ✅ VPC 서버 사용자명
+VPC_SERVER_PASSWORD="B9!ND?UP7hMg*8r"  # 🔑 VPC 서버 비밀번호 (SSH 키 사용 시 비워둬도 됨)
+VPC_PROJECT_DIR="/home/$VPC_SERVER_USER/namdo-bot"
+VPC_SERVICE_NAME="namdo-bot"
+
+# 데이터베이스 정보 (VPC 내부 Private 도메인 사용)
+DB_HOST="db-37h1g8.vpc-cdb.ntruss.com"
+DB_PORT="3306"
+DB_NAME="flova"
+DB_USER="flova_user"
+DB_PASSWORD="flova06*"
+
+# ========================================
+# 🔧 함수 정의
+# ========================================
+
 log_info() {
     echo -e "${GREEN}[INFO]${NC} $1"
 }
@@ -30,49 +46,107 @@ log_error() {
     echo -e "${RED}[ERROR]${NC} $1"
 }
 
-# 1. 로컬 빌드 및 패키징
-log_info "로컬 빌드 및 패키징 중..."
+log_step() {
+    echo -e "${BLUE}[STEP]${NC} $1"
+}
+
+# ========================================
+# 📋 사전 체크
+# ========================================
+
+log_step "1. VPC 배포 사전 체크"
+
+# ... (사전 체크 로직은 이전과 동일)
+
+# ========================================
+# 🚀 배포 시작
+# ========================================
+
+log_step "2. 로컬 의존성 확인"
 if ! python -m pip install -r requirements.txt; then
-    log_error "의존성 설치 실패"
+    log_error "로컬 의존성 설치/확인 실패"
     exit 1
 fi
 
-# 2. 서버 연결 테스트
-log_info "서버 연결 테스트 중..."
-if ! ssh -o ConnectTimeout=10 $SERVER_USER@$SERVER_IP "echo 'Connection successful'"; then
-    log_error "서버 연결 실패. IP 주소와 사용자명을 확인하세요."
+# ========================================
+# 🔌 VPC 서버 연결 테스트
+# ========================================
+
+log_step "3. VPC 서버 연결 테스트"
+if ! ssh -o ConnectTimeout=10 -o StrictHostKeyChecking=no $VPC_SERVER_USER@$VPC_SERVER_IP "echo 'VPC 서버 연결 성공'"; then
+    log_error "VPC 서버 연결 실패!"
+    log_error "확인사항: ACG에서 SSH(22) 포트가 열려있는지, IP/사용자 정보가 정확한지 확인"
     exit 1
 fi
+log_info "✅ VPC 서버 연결 성공: $VPC_SERVER_IP"
 
-# 3. 서버에 프로젝트 디렉토리 생성
-log_info "서버에 프로젝트 디렉토리 생성 중..."
-ssh $SERVER_USER@$SERVER_IP "mkdir -p $PROJECT_DIR"
+# ========================================
+# 📤 프로젝트 파일 업로드
+# ========================================
 
-# 4. 파일 업로드
-log_info "파일 업로드 중..."
-scp -r ./* $SERVER_USER@$SERVER_IP:$PROJECT_DIR/
+log_step "4. VPC 서버에 프로젝트 디렉토리 생성 및 파일 업로드"
+ssh $VPC_SERVER_USER@$VPC_SERVER_IP "mkdir -p $VPC_PROJECT_DIR"
+scp -r namdo_bot.py database.py auth.py models.py crud.py tour_api.py requirements.txt $VPC_SERVER_USER@$VPC_SERVER_IP:$VPC_PROJECT_DIR/
+log_info "✅ 소스 코드 업로드 완료"
 
-# 5. 서버에서 의존성 설치
-log_info "서버에서 의존성 설치 중..."
-ssh $SERVER_USER@$SERVER_IP "cd $PROJECT_DIR && python -m pip install -r requirements.txt"
+# ========================================
+# 🐍 Python 환경 설정
+# ========================================
 
-# 6. 환경 변수 파일 설정
-log_info "환경 변수 파일 설정 중..."
-ssh $SERVER_USER@$SERVER_IP "cd $PROJECT_DIR && cp env_example.txt .env"
+log_step "5. VPC 서버에서 Python 환경 설정"
+ssh $VPC_SERVER_USER@$VPC_SERVER_IP "cd $VPC_PROJECT_DIR && \
+    (command -v python3 || (apt-get update -y && apt-get install -y python3)) && \
+    (command -v pip || apt-get install -y python3-pip) && \
+    (command -v venv || apt-get install -y python3-venv) && \
+    python3 -m venv venv && \
+    source venv/bin/activate && \
+    pip install --upgrade pip && \
+    pip install -r requirements.txt"
+log_info "✅ Python 가상환경 및 의존성 설치 완료"
 
-# 7. systemd 서비스 파일 생성
-log_info "systemd 서비스 파일 생성 중..."
+# ========================================
+# 🔐 환경 변수 설정
+# ========================================
+
+log_step "6. VPC 서버에 .env 파일 생성"
+
+# [수정] .env 파일 생성 시, 하드코딩 대신 상단에 정의된 변수를 사용하도록 변경
+ssh $VPC_SERVER_USER@$VPC_SERVER_IP "cat > $VPC_PROJECT_DIR/.env << EOF
+# NamdoBot Environment Variables (auto-generated by deploy.sh)
+
+# Database Settings
+DATABASE_URL=mysql+pymysql://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_NAME}?charset=utf8mb4
+
+# API Keys (Required)
+TOUR_API_KEY=\"b2a4d3de59c3245acf939ffa8d669a302df0d37319560e0fe841e1723dae078e\"
+CLOVASTUDIO_API_KEY=\"nv-19cdb05e41834049b872867bc517fee9IfZJ\"
+
+# JWT Secret (Production: Should be a long random string)
+SECRET_KEY=namdo-bot-secret-key-2024-flova-project-change-this-in-production
+
+# Other settings
+ALGORITHM=HS256
+ACCESS_TOKEN_EXPIRE_MINUTES=30
+EOF"
+log_info "✅ .env 파일 생성 완료"
+
+# ========================================
+# 🚀 systemd 서비스 설정
+# ========================================
+
+log_step "7. systemd 서비스 파일 생성 및 배포"
+
+# 로컬에 서비스 파일 임시 생성
 cat > /tmp/namdo-bot.service << EOF
 [Unit]
 Description=Namdo Bot Festival Recommendation System
 After=network.target
 
 [Service]
-Type=simple
-User=$SERVER_USER
-WorkingDirectory=$PROJECT_DIR
-Environment=PATH=$PROJECT_DIR/venv/bin
-ExecStart=/usr/bin/python3 $PROJECT_DIR/namdo_bot.py
+User=$VPC_SERVER_USER
+Group=$VPC_SERVER_USER
+WorkingDirectory=$VPC_PROJECT_DIR
+ExecStart=$VPC_PROJECT_DIR/venv/bin/uvicorn namdo_bot:app --host 0.0.0.0 --port 8000
 Restart=always
 RestartSec=10
 
@@ -80,55 +154,33 @@ RestartSec=10
 WantedBy=multi-user.target
 EOF
 
-scp /tmp/namdo-bot.service $SERVER_USER@$SERVER_IP:/tmp/
-ssh $SERVER_USER@$SERVER_IP "sudo mv /tmp/namdo-bot.service /etc/systemd/system/"
+# 서버로 전송 후 이동
+scp /tmp/namdo-bot.service $VPC_SERVER_USER@$VPC_SERVER_IP:/tmp/
+ssh $VPC_SERVER_USER@$VPC_SERVER_IP "sudo mv /tmp/namdo-bot.service /etc/systemd/system/$VPC_SERVICE_NAME.service"
+log_info "✅ systemd 서비스 파일 배포 완료"
 
-# 8. 서비스 활성화 및 시작
-log_info "서비스 활성화 및 시작 중..."
-ssh $SERVER_USER@$SERVER_IP "sudo systemctl daemon-reload && sudo systemctl enable $SERVICE_NAME && sudo systemctl start $SERVICE_NAME"
+# ========================================
+# 🔧 서비스 활성화 및 시작
+# ========================================
 
-# 9. 서비스 상태 확인
-log_info "서비스 상태 확인 중..."
-ssh $SERVER_USER@$SERVER_IP "sudo systemctl status $SERVICE_NAME --no-pager"
+log_step "8. systemd 서비스 활성화 및 재시작"
 
-# 10. 방화벽 설정 (포트 8000 열기)
-log_info "방화벽 설정 중..."
-ssh $SERVER_USER@$SERVER_IP "sudo ufw allow 8000/tcp"
+ssh $VPC_SERVER_USER@$VPC_SERVER_IP "sudo systemctl daemon-reload && \
+    sudo systemctl enable $VPC_SERVICE_NAME && \
+    sudo systemctl restart $VPC_SERVICE_NAME"
+log_info "✅ 서비스 활성화 및 재시작 완료"
 
-# 11. nginx 설정 (선택사항)
-log_info "nginx 설정 중..."
-cat > /tmp/namdo-bot-nginx << EOF
-server {
-    listen 80;
-    server_name your-domain.com;  # 실제 도메인으로 수정
+# ========================================
+# 📊 서비스 상태 확인
+# ========================================
 
-    location / {
-        proxy_pass http://127.0.0.1:8000;
-        proxy_set_header Host \$host;
-        proxy_set_header X-Real-IP \$remote_addr;
-        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto \$scheme;
-    }
-}
-EOF
+log_step "9. 서비스 최종 상태 확인"
+sleep 5 # 서비스가 시작될 시간을 잠시 대기
+ssh $VPC_SERVER_USER@$VPC_SERVER_IP "sudo systemctl status $VPC_SERVICE_NAME --no-pager"
 
-scp /tmp/namdo-bot-nginx $SERVER_USER@$SERVER_IP:/tmp/
-ssh $SERVER_USER@$SERVER_IP "sudo mv /tmp/namdo-bot-nginx /etc/nginx/sites-available/namdo-bot && sudo ln -sf /etc/nginx/sites-available/namdo-bot /etc/nginx/sites-enabled/ && sudo nginx -t && sudo systemctl reload nginx"
-
-# 12. 배포 완료
-log_info "🎉 배포 완료!"
-log_info "서비스 URL: http://$SERVER_IP:8000"
-log_info "API 문서: http://$SERVER_IP:8000/docs"
-log_info "상태 확인: sudo systemctl status $SERVICE_NAME"
-
-# 13. 로그 확인 명령어 안내
-echo ""
-log_warn "로그 확인 명령어:"
-echo "  sudo journalctl -u $SERVICE_NAME -f"
-echo "  sudo tail -f /var/log/nginx/access.log"
-echo ""
-log_warn "서비스 재시작 명령어:"
-echo "  sudo systemctl restart $SERVICE_NAME"
-echo ""
-log_warn "환경 변수 수정 후 재시작:"
-echo "  sudo systemctl restart $SERVICE_NAME"
+# ========================================
+# 🎯 배포 완료
+# ========================================
+log_info "🎉 VPC 배포가 성공적으로 완료되었습니다!"
+log_info "VPC 내부 접속 주소: http://$VPC_SERVER_IP:8000"
+log_info "로그 확인 명령어: ssh $VPC_SERVER_USER@$VPC_SERVER_IP 'sudo journalctl -u $VPC_SERVICE_NAME -f'"

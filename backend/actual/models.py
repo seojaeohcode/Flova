@@ -73,7 +73,7 @@ class UserPreference(UserPreferenceBase):
     user_id: int
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 # ==================== 시스템 상태 모델 ====================
 

@@ -20,7 +20,7 @@ from auth import authenticate_user, create_access_token, get_current_active_user
 from crud import (
     create_conversation, get_conversation_by_session_id, update_conversation_phase,
     add_conversation_message, get_conversation_messages,
-    get_preferences_by_user_id, update_user_preference, update_user_profile_info
+    get_preferences_by_user_id, update_user_preference, update_user_profile
 )
 from models import (
     UserCreate, Token, UserInfo, ConversationInit, ConversationUpdate,
@@ -186,7 +186,7 @@ async def update_user_profile(
     db: Session = Depends(get_db)
 ):
     """사용자 프로필 정보 업데이트"""
-    updated_user = update_user_profile_info(db, current_user.id, full_name, profile_picture)
+    updated_user = update_user_profile(db, current_user.id, full_name, profile_picture)
     if not updated_user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="사용자를 찾을 수 없습니다")
     return UserInfo(

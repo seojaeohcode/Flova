@@ -12,8 +12,8 @@ YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
 # 설정 변수 (실제 값으로 수정 필요)
-SERVER_IP="your-server-ip"
-SERVER_USER="your-username"
+SERVER_IP="211.188.63.67"
+SERVER_USER="root"
 PROJECT_DIR="/home/$SERVER_USER/namdo-bot"
 SERVICE_NAME="namdo-bot"
 

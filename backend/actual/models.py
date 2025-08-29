@@ -10,6 +10,7 @@ class UserBase(BaseModel):
     username: str
     email: EmailStr
     full_name: Optional[str] = None
+    profile_picture: Optional[str] = None
 
 class UserCreate(UserBase):
     password: str
@@ -18,6 +19,7 @@ class UserInfo(BaseModel):
     id: int
     username: str
     full_name: Optional[str] = None
+    profile_picture: Optional[str] = None
 
 class Token(BaseModel):
     access_token: str
@@ -79,4 +81,6 @@ class UserPreference(UserPreferenceBase):
 
 class HealthCheck(BaseModel):
     status: str
-    database: str
+    message: str
+    timestamp: str
+    version: str

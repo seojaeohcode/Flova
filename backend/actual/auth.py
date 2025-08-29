@@ -103,7 +103,7 @@ def get_current_active_user(current_user: User = Depends(get_current_user)) -> U
 
 # ==================== 사용자 생성 헬퍼 ====================
 
-def create_user_helper(db: Session, username: str, email: str, password: str, full_name: str = None) -> User:
+def create_user_helper(db: Session, username: str, email: str, password: str, full_name: str = None, profile_picture: str = None) -> User:
     """사용자 생성 핵심 로직"""
     # 1. 아이디 또는 이메일이 이미 존재하는지 확인
     existing_user = db.query(User).filter(
@@ -121,16 +121,7 @@ def create_user_helper(db: Session, username: str, email: str, password: str, fu
     # 2. 새 사용자 생성
     #    - 비밀번호는 절대 그대로 저장하지 않고, 반드시 암호화해서 저장합니다.
     hashed_password = get_password_hash(password)
-    db_user = User(
-        username=username,
-        email=email,
-        hashed_password=hashed_password,
-        full_name=full_name
-    )
     
-    # 3. 데이터베이스에 사용자 정보 저장
-    db.add(db_user)
-    db.commit()
-    db.refresh(db_user)
-    
-    return db_user
+    # crud.py의 create_user 함수 사용
+    from crud import create_user
+    return create_user(db, username, email, hashed_password, full_name, profile_picture)

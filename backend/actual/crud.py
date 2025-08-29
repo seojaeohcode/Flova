@@ -10,8 +10,8 @@ from models import ConversationInit, UserPreferenceCreate
 
 # ==================== 사용자 CRUD ====================
 
-def create_user(db: Session, username: str, email: str, hashed_password: str, full_name: str = None) -> User:
-    db_user = User(username=username, email=email, hashed_password=hashed_password, full_name=full_name)
+def create_user(db: Session, username: str, email: str, hashed_password: str, full_name: str = None, profile_picture: str = None) -> User:
+    db_user = User(username=username, email=email, hashed_password=hashed_password, full_name=full_name, profile_picture=profile_picture)
     db.add(db_user)
     db.commit()
     db.refresh(db_user)
@@ -19,6 +19,18 @@ def create_user(db: Session, username: str, email: str, hashed_password: str, fu
 
 def get_user_by_username(db: Session, username: str) -> Optional[User]:
     return db.query(User).filter(User.username == username).first()
+
+def update_user_profile(db: Session, user_id: int, full_name: str = None, profile_picture: str = None) -> Optional[User]:
+    """사용자 프로필 정보 업데이트"""
+    user = db.query(User).filter(User.id == user_id).first()
+    if user:
+        if full_name is not None:
+            user.full_name = full_name
+        if profile_picture is not None:
+            user.profile_picture = profile_picture
+        db.commit()
+        db.refresh(user)
+    return user
 
 # ==================== 대화 세션 CRUD ====================
 

@@ -78,17 +78,18 @@ uvicorn namdo_bot:app --host 0.0.0.0 --port 8000 --reload
 
 #### 1. 사용자 등록
 - **엔드포인트**: `POST /register`
-- **설명**: 새로운 사용자 계정 생성
+- **설명**: 새로운 사용자 계정 생성 (프로필 사진 포함)
 - **요청 본문**:
 ```json
 {
   "username": "string",
   "email": "user@example.com",
   "password": "string",
-  "full_name": "string (optional)"
+  "full_name": "string (optional)",
+  "profile_picture": "string (optional, URL)"
 }
 ```
-- **응답**: `UserInfo` 모델
+- **응답**: `UserInfo` 모델 (프로필 사진 포함)
 - **상태 코드**: 200 (성공), 400 (잘못된 요청)
 - **에러 처리**: 중복된 아이디/이메일 검증
 
@@ -104,10 +105,20 @@ uvicorn namdo_bot:app --host 0.0.0.0 --port 8000 --reload
 
 #### 3. 사용자 정보 조회
 - **엔드포인트**: `GET /users/me`
-- **설명**: 현재 로그인된 사용자 정보 조회
+- **설명**: 현재 로그인된 사용자 정보 조회 (프로필 사진 포함)
 - **인증**: Bearer Token 필요
 - **응답**: `UserInfo` 모델
 - **상태 코드**: 200 (성공), 401 (인증 필요)
+
+#### 4. 사용자 프로필 업데이트
+- **엔드포인트**: `PUT /users/me/profile`
+- **설명**: 사용자 프로필 정보 업데이트 (이름, 프로필 사진)
+- **인증**: Bearer Token 필요
+- **쿼리 파라미터**:
+  - `full_name`: 전체 이름 (optional)
+  - `profile_picture`: 프로필 사진 URL (optional)
+- **응답**: `UserInfo` 모델
+- **상태 코드**: 200 (성공), 401 (인증 필요), 404 (사용자 없음)
 
 ### 👤 **사용자 선호도 관리 (User Preferences)**
 
@@ -183,9 +194,17 @@ uvicorn namdo_bot:app --host 0.0.0.0 --port 8000 --reload
 
 #### 9. 시스템 상태 확인
 - **엔드포인트**: `GET /health`
-- **설명**: 시스템 및 데이터베이스 연결 상태 확인
+- **설명**: 시스템 상태 확인 (데이터베이스 연결 상태 포함)
 - **인증**: 불필요
 - **응답**: `HealthCheck` 모델
+  ```json
+  {
+    "status": "healthy",
+    "message": "남도봇 축제 추천 시스템이 정상 작동 중입니다",
+    "timestamp": "2024-01-01T00:00:00",
+    "version": "1.0.0"
+  }
+  ```
 - **상태 코드**: 200 (성공)
 
 #### 10. 루트 엔드포인트
@@ -193,7 +212,32 @@ uvicorn namdo_bot:app --host 0.0.0.0 --port 8000 --reload
 - **설명**: API 기본 정보 및 문서 링크
 - **인증**: 불필요
 - **응답**: 기본 메시지
+  ```json
+  {
+    "message": "남도봇 축제 추천 시스템에 오신 것을 환영합니다!",
+    "version": "1.0.0",
+    "docs": "/docs",
+    "health": "/health"
+  }
+  ```
 - **상태 코드**: 200 (성공)
+
+### 🔍 **개발 및 테스트 (Development & Test)**
+
+#### 11. 축제 검색 테스트
+- **엔드포인트**: `POST /api/festivals/search`
+- **설명**: TourAPI 연동 테스트를 위한 축제 검색 (로그인 불필요)
+- **인증**: 불필요
+- **요청 본문**:
+  ```json
+  {
+    "region_name": "전라북도",
+    "sigungu_name": "부안군 (optional)",
+    "event_start_date": "20240101"
+  }
+  ```
+- **응답**: 축제 목록 및 메시지
+- **상태 코드**: 200 (성공), 503 (TourAPI 오류)
 
 ## 💬 대화 시나리오 (완성된 로직)
 
@@ -223,6 +267,7 @@ uvicorn namdo_bot:app --host 0.0.0.0 --port 8000 --reload
 - `email`: 이메일 (String(100), Unique, Index)
 - `hashed_password`: 암호화된 비밀번호 (String(255))
 - `full_name`: 전체 이름 (String(100), Optional)
+- `profile_picture`: 프로필 사진 URL (String(255), Optional)
 - `is_active`: 활성 상태 (Boolean, Default: True)
 - `created_at`: 생성 시간 (DateTime, Default: func.now())
 - `updated_at`: 수정 시간 (DateTime, Default: func.now())
@@ -264,6 +309,8 @@ uvicorn namdo_bot:app --host 0.0.0.0 --port 8000 --reload
 | `DATABASE_URL` | MySQL 데이터베이스 연결 문자열 | - |
 | `SECRET_KEY` | JWT 토큰 암호화 키 | "namdo-bot-secret-key-2024-flova-project" |
 | `ACCESS_TOKEN_EXPIRE_MINUTES` | 토큰 만료 시간 | 30 |
+| `TOUR_API_KEY` | TourAPI 인증 키 (공공데이터포털) | - |
+| `CLOVASTUDIO_API_KEY` | ClovaX LLM API 키 (네이버 클라우드) | - |
 | `HOST` | 서버 호스트 | 0.0.0.0 |
 | `PORT` | 서버 포트 | 8000 |
 
@@ -289,7 +336,8 @@ curl -X POST "http://localhost:8000/register" \
     "username": "testuser",
     "email": "test@example.com",
     "password": "testpass",
-    "full_name": "테스트 사용자"
+    "full_name": "테스트 사용자",
+    "profile_picture": "https://example.com/profile.jpg"
   }'
 ```
 
@@ -353,6 +401,33 @@ curl -X GET "http://localhost:8000/recommendations/SESSION_ID" \
   -H "Authorization: Bearer YOUR_TOKEN"
 ```
 
+### 8. 프로필 업데이트
+```bash
+curl -X PUT "http://localhost:8000/users/me/profile?full_name=새로운이름&profile_picture=https://example.com/new-profile.jpg" \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+
+### 9. 헬스체크
+```bash
+curl -X GET "http://localhost:8000/health"
+```
+
+### 10. 루트 경로
+```bash
+curl -X GET "http://localhost:8000/"
+```
+
+### 11. 축제 검색 테스트
+```bash
+curl -X POST "http://localhost:8000/api/festivals/search" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "region_name": "전라북도",
+    "sigungu_name": "부안군",
+    "event_start_date": "20241001"
+  }'
+```
+
 ## 🚀 네이버 클라우드 VPC 배포
 
 ### 1. 배포 스크립트 수정
@@ -388,7 +463,10 @@ sudo journalctl -u namdo-bot -f
 
 ## 🔮 향후 개발 계획
 
-- [ ] ClovaX LLM 연동으로 더 자연스러운 대화 구현
+- [x] ClovaX LLM 연동으로 더 자연스러운 대화 구현
+- [x] 프로필 사진 기능 추가
+- [x] 헬스체크 엔드포인트 구현
+- [x] TourAPI 연동 테스트 엔드포인트 추가
 - [ ] 실시간 추천 시스템 구축
 - [ ] 사용자 피드백 기반 추천 정확도 향상
 - [ ] 모바일 앱 API 지원

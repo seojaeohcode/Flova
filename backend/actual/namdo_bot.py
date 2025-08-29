@@ -16,11 +16,11 @@ from pydantic import BaseModel
 
 # --- 로컬 모듈 임포트 ---
 from database import get_db, create_tables, Conversation, User
-from auth import authenticate_user, create_access_token, get_current_active_user, create_user_helper
+from auth import authenticate_user, create_access_token, get_current_active_user, create_user_helper, ACCESS_TOKEN_EXPIRE_MINUTES
 from crud import (
     create_conversation, get_conversation_by_session_id, update_conversation_phase,
     add_conversation_message, get_conversation_messages,
-    get_preferences_by_user_id, update_user_preference
+    get_preferences_by_user_id, update_user_preference, update_user_profile_info
 )
 from models import (
     UserCreate, Token, UserInfo, ConversationInit, ConversationUpdate,
@@ -155,24 +155,13 @@ CONVERSATION_SCENARIO = {
 
 # ==================== API 엔드포인트 ====================
 
-@app.get("/", tags=["Root"])
-async def root():
-    return {"message": "남도봇 축제 추천 시스템", "docs": "/docs"}
 
-@app.get("/health", response_model=HealthCheck, tags=["Health"])
-async def health_check(db: Session = Depends(get_db)):
-    try:
-        db.execute("SELECT 1")
-        db_status = "connected"
-    except Exception:
-        db_status = "disconnected"
-    return HealthCheck(status="healthy", database=db_status)
 
 @app.post("/register", response_model=UserInfo, tags=["Authentication"])
 async def register(user_data: UserCreate, db: Session = Depends(get_db)):
     try:
         user = create_user_helper(db=db, **user_data.model_dump())
-        return UserInfo(id=user.id, username=user.username, full_name=user.full_name)
+        return UserInfo(id=user.id, username=user.username, full_name=user.full_name, profile_picture=user.profile_picture)
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
@@ -187,7 +176,25 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = 
 
 @app.get("/users/me", response_model=UserInfo, tags=["Authentication"])
 async def read_users_me(current_user: User = Depends(get_current_active_user)):
-    return UserInfo(id=current_user.id, username=current_user.username, full_name=current_user.full_name)
+    return UserInfo(id=current_user.id, username=current_user.username, full_name=current_user.full_name, profile_picture=current_user.profile_picture)
+
+@app.put("/users/me/profile", response_model=UserInfo, tags=["Authentication"])
+async def update_user_profile(
+    full_name: str = None,
+    profile_picture: str = None,
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    """사용자 프로필 정보 업데이트"""
+    updated_user = update_user_profile_info(db, current_user.id, full_name, profile_picture)
+    if not updated_user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="사용자를 찾을 수 없습니다")
+    return UserInfo(
+        id=updated_user.id, 
+        username=updated_user.username, 
+        full_name=updated_user.full_name,
+        profile_picture=updated_user.profile_picture
+    )
 
 @app.get("/users/me/preferences", response_model=List[UserPreference], tags=["User Preferences"])
 async def read_user_preferences(current_user: User = Depends(get_current_active_user), db: Session = Depends(get_db)):

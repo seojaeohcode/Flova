@@ -40,4 +40,4 @@ Flova/
     └── LICENSE
 ```
 
-자세한 설명은 `README.md` 참고.
+상세 설명은 [README.md](README.md) 및 [docs/](docs/) 폴더 참고.

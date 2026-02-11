@@ -6,9 +6,9 @@ import uuid
 from typing import Optional, List
 
 # 로컬 모듈 임포트
-from database import User, Conversation, Festival, FestivalDetail, FestivalIntro, PetInfo
-from models import UserCreate, UserInfo, ConversationInit
-from auth import get_password_hash
+from core.database import User, Conversation, Festival, FestivalDetail, FestivalIntro, PetInfo
+from schemas.models import UserCreate, UserInfo, ConversationInit
+from core.auth import get_password_hash
 
 # ==================== 사용자 CRUD ====================
 

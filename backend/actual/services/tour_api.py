@@ -9,7 +9,6 @@ import ssl
 from requests.adapters import HTTPAdapter
 from urllib3.poolmanager import PoolManager
 
-# .env 파일 로드 및 변수 선언
 load_dotenv()
 TOUR_API_KEY = os.getenv("TOUR_API_KEY")
 
@@ -18,7 +17,6 @@ FESTIVAL_API_URL = f"{KOR_SERVICE_URL}/searchFestival2"
 AREA_CODE_API_URL = f"{KOR_SERVICE_URL}/areaCode2"
 _area_code_cache = {}
 
-# SSL/TLS 호환성 문제 해결을 위한 어댑터 클래스
 class TlsAdapter(HTTPAdapter):
     def init_poolmanager(self, connections, maxsize, block=False):
         ctx = ssl.create_default_context()
@@ -31,7 +29,6 @@ class TlsAdapter(HTTPAdapter):
         )
 
 def _fetch_codes(session: requests.Session, area_code: str = "") -> Optional[List[Dict]]:
-    """TourAPI의 areaCode2를 호출하여 지역/시군구 코드 목록을 가져오는 내부 함수"""
     params = {
         "serviceKey": TOUR_API_KEY,
         "numOfRows": 500,
@@ -42,7 +39,7 @@ def _fetch_codes(session: requests.Session, area_code: str = "") -> Optional[Lis
     }
     if area_code:
         params["areaCode"] = area_code
-    
+
     try:
         print(f"  [디버그] areaCode API 호출 시작... (areaCode: {area_code or '전체'})")
         response = session.get(AREA_CODE_API_URL, params=params, timeout=5)
@@ -55,7 +52,6 @@ def _fetch_codes(session: requests.Session, area_code: str = "") -> Optional[Lis
         return None
 
 def _fetch_and_find_codes(session: requests.Session, region_name: str, sigungu_name: Optional[str] = None) -> Optional[Tuple[str, str]]:
-    """지역명으로 코드를 실시간 조회하는 함수 (캐시 기능 포함)"""
     if "main_areas" not in _area_code_cache:
         main_areas = _fetch_codes(session)
         if main_areas is None: return None
@@ -65,7 +61,7 @@ def _fetch_and_find_codes(session: requests.Session, region_name: str, sigungu_n
     if not area_code:
         print(f"오류: '{region_name}' 광역 지역을 찾을 수 없습니다.")
         return None
-    
+
     sigungu_code = ""
     if sigungu_name:
         cache_key = f"sigungu_{area_code}"
@@ -73,16 +69,15 @@ def _fetch_and_find_codes(session: requests.Session, region_name: str, sigungu_n
             sigungu_areas = _fetch_codes(session, area_code=area_code)
             if sigungu_areas is None: return None
             _area_code_cache[cache_key] = {item['name']: item['code'] for item in sigungu_areas}
-        
+
         sigungu_code = _area_code_cache[cache_key].get(sigungu_name)
         if sigungu_code is None:
             print(f"오류: '{region_name}'에서 '{sigungu_name}' 시군구를 찾을 수 없습니다.")
             return None
-            
+
     return area_code, sigungu_code
 
 def get_festivals_by_name(region_name: str, sigungu_name: Optional[str], event_start_date: str) -> Optional[List[Dict]]:
-    """ TourAPI를 호출하여 특정 지역과 기간의 축제 정보를 가져옵니다. """
     if not TOUR_API_KEY:
         print("❌ [오류] .env 파일에 TOUR_API_KEY가 설정되지 않았습니다.")
         return None
@@ -93,15 +88,14 @@ def get_festivals_by_name(region_name: str, sigungu_name: Optional[str], event_s
 
         print("\n[과정 1] 지역명을 지역코드로 변환합니다...")
         codes = _fetch_and_find_codes(session, region_name, sigungu_name)
-        
+
         if not codes:
             print("❌ [오류] 지역명->코드 변환 실패. 함수를 중단합니다.")
             return None
-        
+
         area_code, sigungu_code = codes
         print(f"✅ [성공] 지역명 변환 완료: '{region_name}' -> areaCode={area_code}, '{sigungu_name or '전체'}' -> sigunguCode={sigungu_code or '(전체검색)'}")
 
-        # [수정] API 요청 파라미터를 최소한으로 간소화
         params = {
             "serviceKey": TOUR_API_KEY,
             "MobileOS": "ETC",
@@ -119,9 +113,9 @@ def get_festivals_by_name(region_name: str, sigungu_name: Optional[str], event_s
         response.raise_for_status()
         data = response.json()
         items = data.get("response", {}).get("body", {}).get("items", {}).get("item", [])
-        
+
         print(f"✅ [성공] 축제 정보 조회 완료. {len(items) if items else 0}개의 결과를 받았습니다.")
-        
+
         if not items:
             return []
 

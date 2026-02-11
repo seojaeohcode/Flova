@@ -1,4 +1,4 @@
-# models.py
+# schemas/models.py (Pydantic API models)
 
 from pydantic import BaseModel
 from typing import Optional, List, Dict, Any
@@ -141,11 +141,11 @@ class PetInfo(BaseModel):
 
 # 축제 추천 요청 모델
 class FestivalRecommendationRequest(BaseModel):
-    travel_period: str  # 여행 시기 (예: "10월")
-    companion_type: str  # 동반자 유형 (예: "부모님 동반 가족")
-    atmosphere: str  # 여행 분위기 (예: "여유로운 힐링")
-    core_experience: str  # 핵심 경험 (예: "음식")
-    additional_considerations: str  # 추가 고려사항 (예: "걷기 최소화")
+    travel_period: str
+    companion_type: str
+    atmosphere: str
+    core_experience: str
+    additional_considerations: str
 
 # 축제 추천 응답 모델
 class FestivalRecommendation(BaseModel):

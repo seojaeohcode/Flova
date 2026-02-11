@@ -1,10 +1,26 @@
 # honam_festivals_to_csv.py
+# Run from backend/actual: python -m scripts.honam_festivals_to_csv
+# Or: cd backend/actual && python scripts/honam_festivals_to_csv.py
 
 import csv
+import sys
 from datetime import datetime
-from tour_api import TOUR_API_KEY, FESTIVAL_API_URL, _fetch_and_find_codes, TlsAdapter
 import requests
 import json
+
+# Allow running as script: cd backend/actual && python scripts/honam_festivals_to_csv.py
+if __name__ == "__main__" and __package__ is None:
+    import os
+    _root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    sys.path.insert(0, _root)
+
+from services.tour_api import (
+    TOUR_API_KEY,
+    FESTIVAL_API_URL,
+    _fetch_and_find_codes,
+    TlsAdapter,
+)
+
 
 def fetch_all_festivals(area_code, sigungu_code, event_start_date):
     """페이지네이션을 돌면서 모든 축제 데이터를 가져오기"""

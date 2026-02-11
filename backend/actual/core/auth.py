@@ -10,21 +10,15 @@ from sqlalchemy.orm import Session
 import os
 from dotenv import load_dotenv
 
-# 로컬 모듈 임포트
-from database import get_db, User
+from .database import get_db, User
 
-# 환경변수 로드
 load_dotenv()
 
-# 보안 설정
 SECRET_KEY = os.getenv("SECRET_KEY", "namdo-bot-secret-key-2024-flova-project")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
-# 비밀번호 해싱 컨텍스트
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-
-# OAuth2 스키마
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
 # ==================== 비밀번호 관리 ====================
@@ -46,7 +40,7 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
         expire = datetime.utcnow() + expires_delta
     else:
         expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-    
+
     to_encode.update({"exp": expire})
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt
@@ -80,19 +74,19 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
         detail="Could not validate credentials",
         headers={"WWW-Authenticate": "Bearer"},
     )
-    
+
     payload = verify_token(token)
     if payload is None:
         raise credentials_exception
-    
+
     username: str = payload.get("sub")
     if username is None:
         raise credentials_exception
-    
+
     user = db.query(User).filter(User.username == username).first()
     if user is None:
         raise credentials_exception
-    
+
     return user
 
 def get_current_active_user(current_user: User = Depends(get_current_user)) -> User:
@@ -104,24 +98,17 @@ def get_current_active_user(current_user: User = Depends(get_current_user)) -> U
 # ==================== 사용자 생성 헬퍼 ====================
 
 def create_user_helper(db: Session, username: str, email: str, password: str, full_name: str = None, profile_picture: str = None) -> User:
-    """사용자 생성 핵심 로직"""
-    # 1. 아이디 또는 이메일이 이미 존재하는지 확인
+    """사용자 생성 핵심 로직 (순환 import 방지를 위해 함수 내부에서 import)"""
+    from crud import create_user
     existing_user = db.query(User).filter(
         (User.username == username) | (User.email == email)
     ).first()
-    
+
     if existing_user:
         if existing_user.username == username:
-            # 중복된 아이디가 있으면 에러 발생
             raise ValueError("이미 등록된 아이디입니다.")
         else:
-            # 중복된 이메일이 있으면 에러 발생
             raise ValueError("이미 등록된 이메일입니다.")
-    
-    # 2. 새 사용자 생성
-    #    - 비밀번호는 절대 그대로 저장하지 않고, 반드시 암호화해서 저장합니다.
+
     hashed_password = get_password_hash(password)
-    
-    # crud.py의 create_user 함수 사용
-    from crud import create_user
     return create_user(db, username, email, hashed_password, full_name, profile_picture)

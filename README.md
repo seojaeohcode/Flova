@@ -49,20 +49,56 @@ AI 기반 멀티턴 대화형 남도 축제 추천 시스템으로, LangChain과
 ## 📁 프로젝트 구조
 
 ```
-backend/actual/
-├── namdo_bot.py          # 🚀 메인 FastAPI 애플리케이션
-├── database.py            # 🗄️ SQLAlchemy 데이터베이스 모델
-├── models.py              # 📋 Pydantic API 모델
-├── crud.py                # 🔧 데이터베이스 CRUD 작업
-├── auth.py                # 🔐 JWT 인증 및 사용자 관리
-├── festival_service.py    # 🌐 TourAPI 연동 및 축제 서비스
-├── tour_api.py            # 📡 공공데이터포털 API 클라이언트
-├── honam_festivals_to_csv.py  # 📊 축제 데이터 수집 스크립트
-├── requirements.txt       # 📦 Python 의존성
-├── deploy.sh              # 🚀 VPC 배포 스크립트
-├── env_example.txt        # ⚙️ 환경 변수 예시
-└── README.md              # 📖 프로젝트 문서
+Flova/
+├── README.md
+├── backend/
+│   ├── actual/                    # 🚀 서비스 백엔드 (운영)
+│   │   ├── namdo_bot.py           # FastAPI 앱 진입점
+│   │   ├── crud.py                # DB CRUD
+│   │   ├── core/
+│   │   │   ├── database.py        # SQLAlchemy 모델·세션
+│   │   │   └── auth.py           # JWT 인증
+│   │   ├── schemas/
+│   │   │   └── models.py         # Pydantic 요청/응답 모델
+│   │   ├── services/
+│   │   │   ├── tour_api.py        # 관광공사 API 클라이언트
+│   │   │   └── festival_service.py  # 축제 수집·추천 서비스
+│   │   ├── scripts/
+│   │   │   └── honam_festivals_to_csv.py  # 축제 → CSV 수집
+│   │   ├── requirements.txt
+│   │   ├── deploy.sh
+│   │   └── env_example.txt
+│   └── example/                   # 예제·테스트
+│       ├── LLM_RAG_example/
+│       ├── check_db.py
+│       └── test_mysql_connection.py
+└── llm_relevant/                   # LLM·RAG 실험·예제
+    ├── data/                       # CSV 등 데이터
+    │   ├── honam_festivals_base.csv
+    │   ├── honam_festivals_common.csv
+    │   └── honam_festivals_intro.csv
+    ├── rag/
+    │   └── langchain_RAG.py        # LangChain RAG (CSV → FAISS)
+    ├── examples/                   # 단계별 예제
+    │   ├── 01_llm.py
+    │   ├── 02_.py
+    │   ├── 03_Langchain_RAG.py
+    │   ├── 04_fastAPI.py
+    │   ├── 05_chatbot.py
+    │   └── 원래_03.py
+    ├── templates/
+    │   └── index.html
+    ├── scripts/
+    │   ├── honam_festivals_to_csv.py
+    │   └── tour_api.py
+    ├── requirements.txt
+    ├── .gitignore
+    └── LICENSE
 ```
+
+- **백엔드 실행**: `cd backend/actual` 후 `python namdo_bot.py` (또는 uvicorn)
+- **CSV 수집(백엔드)**: `cd backend/actual` 후 `python scripts/honam_festivals_to_csv.py`
+- **RAG 실행**: `cd llm_relevant` 후 `python rag/langchain_RAG.py` (데이터는 `llm_relevant/data/` 사용)
 
 ## 🗄️ 데이터베이스 스키마 상세
 

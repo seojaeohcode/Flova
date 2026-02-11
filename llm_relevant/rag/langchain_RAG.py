@@ -17,8 +17,10 @@ service_key = os.getenv("PUBLIC_DATA_SERVICE_KEY")
 # 2) LLM
 llm = ChatClovaX(model="HCX-007", api_key=clova_api_key, temperature=0.2)
 
-# 3) 문서 로드
-csv_paths = ["honam_festivals_base.csv", "honam_festivals_common.csv", "honam_festivals_intro.csv"] 
+# 3) 문서 로드 (data/ 디렉토리 기준)
+_DATA_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "data")
+_csv_names = ["honam_festivals_base.csv", "honam_festivals_common.csv", "honam_festivals_intro.csv"]
+csv_paths = [os.path.join(_DATA_DIR, n) for n in _csv_names]
 all_documents = []
 
 for csv_file in csv_paths:

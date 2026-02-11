@@ -15,24 +15,24 @@ from dotenv import load_dotenv
 from pydantic import BaseModel
 
 # --- 로컬 모듈 임포트 ---
-from database import get_db, create_tables, Conversation, User
-from auth import authenticate_user, create_access_token, get_current_active_user, create_user_helper, ACCESS_TOKEN_EXPIRE_MINUTES
+from core.database import get_db, create_tables, Conversation, User
+from core.auth import authenticate_user, create_access_token, get_current_active_user, create_user_helper, ACCESS_TOKEN_EXPIRE_MINUTES
 from crud import (
     create_conversation, get_conversation_by_session_id, update_conversation_phase,
     update_user_profile
 )
-from models import (
+from schemas.models import (
     UserCreate, Token, UserInfo, ConversationInit, ConversationUpdate,
     ChatResponse, RecommendationResponse, HealthCheck, FestivalRecommendation,
     UserPreference, UserPreferenceCreate, FestivalRecommendationRequest, FestivalRecommendationResponse,
     BotGreetingRequest, BotGreetingResponse, XAIFinalizeRequest, XAIFinalizeResponse,
     StructuredRecommendationResponse, TopRecommendation, AlternativeRecommendation, ScoreBreakdown, RecommendationCriteria
 )
-from tour_api import get_festivals_by_name
+from services.tour_api import get_festivals_by_name
 from langchain_naver import ChatClovaX
 from langchain.chains import LLMChain
 from langchain.prompts import PromptTemplate
-from festival_service import festival_service
+from services.festival_service import festival_service
 from langchain.output_parsers import PydanticOutputParser
 
 # --- 로깅 및 FastAPI 앱 설정 ---

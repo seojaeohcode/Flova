@@ -5,21 +5,20 @@ import json
 from datetime import datetime
 from typing import Dict, List, Optional, Tuple
 from dotenv import load_dotenv
-from database import get_db, Festival, FestivalDetail, FestivalIntro, PetInfo
-from crud import create_festival, create_festival_detail, create_festival_intro, create_pet_info
 import ssl
 from requests.adapters import HTTPAdapter
 from urllib3.poolmanager import PoolManager
 
+from core.database import get_db, Festival, FestivalDetail, FestivalIntro, PetInfo
+from crud import create_festival, create_festival_detail, create_festival_intro, create_pet_info
+
 load_dotenv()
 
-# TourAPI 설정
 TOUR_API_KEY = os.getenv("TOUR_API_KEY")
 KOR_SERVICE_URL = "https://apis.data.go.kr/B551011/KorService2"
 FESTIVAL_API_URL = f"{KOR_SERVICE_URL}/searchFestival2"
 AREA_CODE_API_URL = f"{KOR_SERVICE_URL}/areaCode2"
 
-# SSL/TLS 호환성 문제 해결을 위한 어댑터 클래스
 class TlsAdapter(HTTPAdapter):
     def init_poolmanager(self, connections, maxsize, block=False):
         ctx = ssl.create_default_context()
@@ -36,9 +35,8 @@ class FestivalService:
         self.session = requests.Session()
         self.session.mount("https://", TlsAdapter())
         self._area_code_cache = {}
-    
+
     def _fetch_codes(self, area_code: str = "") -> Optional[List[Dict]]:
-        """TourAPI의 areaCode2를 호출하여 지역/시군구 코드 목록을 가져오는 내부 함수"""
         params = {
             "serviceKey": TOUR_API_KEY,
             "numOfRows": 500,
@@ -49,7 +47,7 @@ class FestivalService:
         }
         if area_code:
             params["areaCode"] = area_code
-        
+
         try:
             response = self.session.get(AREA_CODE_API_URL, params=params, timeout=5)
             response.raise_for_status()
@@ -60,7 +58,6 @@ class FestivalService:
             return None
 
     def _fetch_and_find_codes(self, region_name: str, sigungu_name: Optional[str] = None) -> Optional[Tuple[str, str]]:
-        """지역명으로 코드를 실시간 조회하는 함수 (캐시 기능 포함)"""
         if "main_areas" not in self._area_code_cache:
             main_areas = self._fetch_codes()
             if main_areas is None:
@@ -71,7 +68,7 @@ class FestivalService:
         if not area_code:
             print(f"오류: '{region_name}' 광역 지역을 찾을 수 없습니다.")
             return None
-        
+
         sigungu_code = ""
         if sigungu_name:
             cache_key = f"sigungu_{area_code}"
@@ -80,16 +77,15 @@ class FestivalService:
                 if sigungu_areas is None:
                     return None
                 self._area_code_cache[cache_key] = {item['name']: item['code'] for item in sigungu_areas}
-            
+
             sigungu_code = self._area_code_cache[cache_key].get(sigungu_name)
             if sigungu_code is None:
                 print(f"오류: '{region_name}'에서 '{sigungu_name}' 시군구를 찾을 수 없습니다.")
                 return None
-                
+
         return area_code, sigungu_code
 
     def fetch_detail_common(self, content_id: str, content_type_id: str) -> Dict:
-        """TourAPI의 detailCommon2를 호출하여 공통 정보를 가져오는 함수"""
         params = {
             "serviceKey": TOUR_API_KEY,
             "MobileOS": "ETC",
@@ -97,7 +93,6 @@ class FestivalService:
             "_type": "json",
             "contentId": content_id,
         }
-
         try:
             response = self.session.get(f"{KOR_SERVICE_URL}/detailCommon2", params=params, timeout=5)
             response.raise_for_status()
@@ -125,7 +120,6 @@ class FestivalService:
             return {}
 
     def fetch_detail_intro(self, content_id: str, content_type_id: str) -> Dict:
-        """TourAPI의 detailIntro2를 호출하여 축제 소개 정보를 가져오는 함수"""
         params = {
             "serviceKey": TOUR_API_KEY,
             "MobileOS": "ETC",
@@ -134,7 +128,6 @@ class FestivalService:
             "contentId": content_id,
             "contentTypeId": content_type_id,
         }
-
         try:
             response = self.session.get(f"{KOR_SERVICE_URL}/detailIntro2", params=params, timeout=5)
             response.raise_for_status()
@@ -158,7 +151,6 @@ class FestivalService:
             return {}
 
     def fetch_pet_info(self, content_id: str) -> Dict:
-        """TourAPI의 detailPetTour2를 호출하여 반려동물 여행 정보를 가져오는 함수"""
         params = {
             "serviceKey": TOUR_API_KEY,
             "MobileOS": "ETC",
@@ -166,7 +158,6 @@ class FestivalService:
             "_type": "json",
             "contentId": content_id,
         }
-
         try:
             response = self.session.get(f"{KOR_SERVICE_URL}/detailPetTour2", params=params, timeout=5)
             response.raise_for_status()
@@ -177,7 +168,7 @@ class FestivalService:
                 item = {}
             else:
                 item = items.get("item", [])
-            
+
             if isinstance(item, list) and item:
                 item = item[0]
             elif not isinstance(item, dict):
@@ -200,10 +191,8 @@ class FestivalService:
             return {}
 
     def fetch_all_festivals(self, area_code, sigungu_code, event_start_date):
-        """페이지네이션을 돌면서 모든 축제 데이터를 가져오기"""
         all_items = []
         page = 1
-
         while True:
             params = {
                 "serviceKey": TOUR_API_KEY,
@@ -224,17 +213,13 @@ class FestivalService:
             body = data.get("response", {}).get("body", {})
             items = body.get("items", {}).get("item", [])
             total_count = body.get("totalCount", 0)
-
             all_items.extend(items)
-
             if len(all_items) >= total_count:
                 break
             page += 1
-
         return all_items
 
     def get_festivals_by_name(self, region_name: str, sigungu_name: str, event_start_date: str):
-        """지역명과 날짜를 받아 모든 축제 정보 가져오기"""
         try:
             codes = self._fetch_and_find_codes(region_name, sigungu_name)
             if not codes:
@@ -264,16 +249,14 @@ class FestivalService:
             return []
 
     def collect_all_honam_festivals(self, db):
-        """호남 지역 축제 정보를 수집하여 데이터베이스에 저장"""
         today = datetime.today().strftime("%Y%m%d")
         regions = ["전북특별자치도", "전라남도", "광주"]
-
         total_collected = 0
 
         for region in regions:
             print(f"\n--- {region} 지역 축제 정보 수집 시작 ---")
             festivals = self.get_festivals_by_name(region_name=region, sigungu_name=None, event_start_date=today)
-            
+
             if not festivals:
                 print(f"--- {region} 지역에 예정된 축제가 없습니다. ---")
                 continue
@@ -282,30 +265,24 @@ class FestivalService:
                 print(f"({i+1}/{len(festivals)}) '{f.get('title', f.get('contentid'))}' 상세 정보 조회 중...")
                 content_id = f["contentid"]
                 content_type_id = f["contenttypeid"]
-                
-                # API 호출
+
                 pet_info = self.fetch_pet_info(content_id)
                 detail_common = self.fetch_detail_common(content_id, content_type_id)
                 detail_intro = self.fetch_detail_intro(content_id, content_type_id)
 
-                # 데이터베이스에 저장
                 try:
-                    # 기본 축제 정보 저장
                     festival_data = f.copy()
                     festival_data["region"] = region
-                    festival = create_festival(db, festival_data)
+                    create_festival(db, festival_data)
 
-                    # 상세 정보 저장
                     if detail_common:
                         detail_common["contentid"] = content_id
                         create_festival_detail(db, detail_common)
 
-                    # 소개 정보 저장
                     if detail_intro:
                         detail_intro["contentid"] = content_id
                         create_festival_intro(db, detail_intro)
 
-                    # 반려동물 정보 저장
                     if pet_info:
                         pet_info["contentid"] = content_id
                         create_pet_info(db, pet_info)
@@ -319,11 +296,9 @@ class FestivalService:
         print(f"\n🎉 총 {total_collected}개의 축제 정보 수집 완료!")
         return total_collected
 
-    def get_festival_recommendations(self, db, travel_period: str, companion_type: str, 
-                                   atmosphere: str, core_experience: str, 
+    def get_festival_recommendations(self, db, travel_period: str, companion_type: str,
+                                   atmosphere: str, core_experience: str,
                                    additional_considerations: str) -> List[Dict]:
-        """사용자 조건에 맞는 축제 추천"""
-        # 기본 필터링
         festivals = db.query(Festival).filter(
             Festival.start_date >= travel_period
         ).all()
@@ -333,44 +308,36 @@ class FestivalService:
             score = 0
             reasons = []
 
-            # 지역 점수
             if "전북" in festival.region or "전남" in festival.region or "광주" in festival.region:
                 score += 10
                 reasons.append("호남 지역 축제")
 
-            # 계절 적합성
             if travel_period in festival.start_date or travel_period in festival.end_date:
                 score += 15
                 reasons.append("계절에 적합")
 
-            # 동반자 적합성
             if companion_type == "부모님 동반 가족":
                 if "휴식" in atmosphere or "여유" in atmosphere:
                     score += 20
                     reasons.append("부모님과 함께하기 좋은 여유로운 분위기")
 
-            # 핵심 경험 매칭
             if core_experience == "음식" and "음식" in str(festival.festivaltype):
                 score += 25
                 reasons.append("음식 중심 축제")
 
-            # 추가 고려사항
             if "걷기" in additional_considerations and "평지" in str(festival.progresstype):
                 score += 15
                 reasons.append("걷기 편한 평지 조성")
 
-            if score > 30:  # 최소 점수 기준
+            if score > 30:
                 recommendations.append({
                     "festival": festival,
                     "score": score,
                     "reasons": reasons
                 })
 
-        # 점수순 정렬
         recommendations.sort(key=lambda x: x["score"], reverse=True)
-        
-        # 상위 5개 반환
         return recommendations[:5]
 
-# 싱글톤 인스턴스
+
 festival_service = FestivalService()

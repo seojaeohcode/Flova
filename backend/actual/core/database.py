@@ -37,6 +37,8 @@ class Conversation(Base):
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     session_id = Column(String(255), unique=True, index=True, nullable=False)
+    phase = Column(String(50), nullable=True, default="initial")
+    status = Column(String(50), nullable=True, default="active")
     travel_period = Column(String(50), nullable=True)
     companion_type = Column(String(100), nullable=True)
     has_pets = Column(Boolean, default=False, nullable=True)

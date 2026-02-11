@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>FLOVA 챗봇</title>
+  <script>
+    async function sendQuery() {
+      const query = document.getElementById("query").value;
+      const resArea = document.getElementById("response");
+      resArea.innerText = "답변 생성 중...";
+      const response = await fetch("/api/chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ query })
+        });
+      const data = await response.json();
+      resArea.innerText = data.answer || "답변을 받지 못했습니다.";
+    }
+  </script>
+</head>
+<body>
+  <h2>FLOVA 챗봇</h2>
+  <input type="text" id="query" placeholder="질문을 입력하세요" style="width:300px;">
+  <button onclick="sendQuery()">질문하기</button>
+  <p id="response" style="margin-top:20px; white-space: pre-wrap;"></p>
+</body>
+</html>

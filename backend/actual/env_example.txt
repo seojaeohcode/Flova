@@ -1,0 +1,20 @@
+# ========================================
+# 남도봇 축제 추천 시스템 환경변수 설정
+# ========================================
+
+# 🔐 필수 설정
+DATABASE_URL=mysql+pymysql://flova_user:flova06*@db-37h1g8.vpc-cdb.ntruss.com:3306/flova?charset=utf8mb4
+
+# 🌐 TourAPI 설정
+TOUR_API_KEY=your_tour_api_key_here
+
+# 🤖 ClovaX LLM 설정
+CLOVASTUDIO_API_KEY=your_clovastudio_api_key_here
+
+# 🔑 보안 설정 (선택사항 - 기본값 사용)
+# SECRET_KEY=your-super-secret-key-here
+
+# 📝 참고사항:
+# - DATABASE_URL: 네이버 클라우드 MySQL 연결 정보
+# - SECRET_KEY: 설정하지 않으면 기본값 사용 (개발용)
+# - 프로덕션에서는 반드시 SECRET_KEY를 설정하세요!

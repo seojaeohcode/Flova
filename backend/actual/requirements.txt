@@ -1,0 +1,40 @@
+# FastAPI 및 웹 프레임워크
+fastapi
+uvicorn
+python-multipart
+
+# 데이터베이스
+sqlalchemy
+pymysql
+
+# 인증 및 보안
+python-jose[cryptography]
+passlib[bcrypt]
+python-dotenv
+
+# LLM 및 AI
+requests
+langchain-community
+langchain-naver
+langchain
+faiss-cpu
+pypdf
+jinja2
+
+# 데이터 검증
+pydantic
+
+# LangChain 및 LLM 관련
+langchain==0.3.27
+langchain-community==0.3.29
+langchain-naver==0.1.1
+langchain-core==0.3.75
+langchain-text-splitters==0.3.10
+
+# 벡터 저장소 및 임베딩
+faiss-cpu==1.12.0
+openai==1.102.0
+
+# 기타 유틸리티
+pypdf==6.0.0
+jinja2==3.1.6
